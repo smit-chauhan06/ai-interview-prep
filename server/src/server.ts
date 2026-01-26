@@ -1,8 +1,7 @@
-import { express, Request, Response } from "express";
-import { cors } from "cors";
+import { Request, Response } from "express";
 import dotenv from "dotenv";
 import app from "./app";
-import cookieParser from "cookie-parser";
+import { connectDB } from "./config/db";
 
 dotenv.config();
 
@@ -14,6 +13,8 @@ app.get("/api/health", (req: Request, res: Response) => {
     message: "Server is up",
   });
 });
+
+connectDB();
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
