@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import { User } from "../models/User.model";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
+const jwtSecret = process.env.JWT_SECRET!;
+const jwtExpiresIn = process.env
+  .JWT_EXPIRES_IN! as jwt.SignOptions["expiresIn"];
 
 export const registerUser = async (req: Request, res: Response) => {
   try {
@@ -34,6 +39,47 @@ export const registerUser = async (req: Request, res: Response) => {
   } catch (error: any) {
     res.status(500).json({
       message: "Registration Failed",
+      error: error.message,
+    });
+  }
+};
+
+export const loginUser = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ message: "Email and password are required fields" });
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const token = jwt.sign({ userId: user._id }, jwtSecret, {
+      expiresIn: jwtExpiresIn,
+    });
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: false, // true in production with HTTPS
+      sameSite: "lax",
+    });
+
+    res.json({ message: "Login successful" });
+  } catch (error: any) {
+    res.status(500).json({
+      message: "Login Failed",
       error: error.message,
     });
   }
