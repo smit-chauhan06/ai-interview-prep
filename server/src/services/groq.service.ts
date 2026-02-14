@@ -10,6 +10,7 @@ export const generateInterviewQuestion = async (
   difficulty: string,
   topic: string,
   mode: "theory" | "practical" | "mixed",
+  previousQuestions: string[] = [],
 ) => {
   const seed = Math.floor(Math.random() * 100000);
 

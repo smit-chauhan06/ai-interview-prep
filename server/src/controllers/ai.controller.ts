@@ -4,12 +4,15 @@ import {
   getOrCreateSession,
   rememberQuestion,
 } from "../services/session.service";
+import { AuthRequest } from "../middlewares/auth.middleware";
+import { evaluateAnswer } from "../services/evaluation.service";
+import { InterviewSession } from "../models/InterviewSession.model";
 
 export const generateQuestion = async (req: Request, res: Response) => {
   try {
     const { role, language, difficulty, topic, mode = "mixed" } = req.body;
 
-    const userId = req.user!.id;
+    const userId = (req as AuthRequest).userId || "";
 
     const session = await getOrCreateSession({
       userId,
@@ -18,7 +21,7 @@ export const generateQuestion = async (req: Request, res: Response) => {
       mode,
     });
 
-    const previousQuestions = session.questionsAsked.slice(-8);
+    const previousQuestions = session.questionsAsked.slice(-8) || [];
 
     if (!role || !language || !difficulty) {
       return res.status(400).json({
@@ -37,7 +40,7 @@ export const generateQuestion = async (req: Request, res: Response) => {
       previousQuestions,
     );
 
-    await rememberQuestion(session.id, question || "");
+    await rememberQuestion(session._id.toString(), question || "");
 
     res.json({
       question,
@@ -46,6 +49,51 @@ export const generateQuestion = async (req: Request, res: Response) => {
   } catch (error: any) {
     res.status(500).json({
       message: "Failed to generate question",
+      error: error.message,
+    });
+  }
+};
+
+export const evaluate = async (req: Request, res: Response) => {
+  try {
+    const { sessionId, question, answer, role, language, difficulty, mode } =
+      req.body;
+
+    if (!question || !answer || !sessionId) {
+      return res.status(400).json({
+        message: "Missing required fields",
+      });
+    }
+
+    const evaluation = await evaluateAnswer(
+      question,
+      answer,
+      role,
+      language,
+      difficulty,
+      mode,
+    );
+
+    await InterviewSession.findByIdAndUpdate(sessionId, {
+      $push: {
+        evaluations: {
+          question,
+          answer,
+          score: evaluation.score,
+          feedback: {
+            strengths: evaluation.strengths,
+            weaknesses: evaluation.weaknesses,
+            missingPoints: evaluation.missingPoints,
+          },
+          followUp: evaluation.followUpQuestion,
+        },
+      },
+    });
+
+    res.json(evaluation);
+  } catch (error: any) {
+    res.status(500).json({
+      message: "Failed to evaluate answer",
       error: error.message,
     });
   }

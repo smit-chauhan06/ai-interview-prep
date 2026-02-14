@@ -6,8 +6,21 @@ export interface IInterviewSession extends Document {
   language: string;
   mode: "theory" | "practical" | "mixed";
   questionsAsked: string[];
+  evaluation: Evaluation[];
   createdAt: Date;
   updatedAt: Date;
+}
+
+interface Evaluation {
+  question: string;
+  answer: string;
+  score: string;
+  feedback: {
+    strengths: string[];
+    weaknesses: string[];
+    missingPoints: string[];
+  };
+  followUp?: string;
 }
 
 const InterviewSessionSchema = new Schema<IInterviewSession>(
@@ -20,6 +33,19 @@ const InterviewSessionSchema = new Schema<IInterviewSession>(
       enum: ["theory", "practical", "mixed"],
     },
     questionsAsked: { type: [String], default: [] },
+    evaluation: [
+      {
+        question: String,
+        answer: String,
+        score: Number,
+        feedback: {
+          strengths: [String],
+          weaknesses: [String],
+          missingPoints: [String],
+        },
+        followUp: String,
+      },
+    ],
   },
   { timestamps: true },
 );
